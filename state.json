@@ -1,0 +1,24 @@
+{
+ "device_latency_ms": {
+  "Lautsprecher (ULT FIELD 1)": 200
+ },
+ "params": {
+  "color": [
+   1.0,
+   0.0,
+   0.0
+  ],
+  "color_max": 0.06,
+  "cozy_color_max": 0.04,
+  "intensity": 1.0,
+  "mode": "performance",
+  "pulse_contrast": 3.1,
+  "pulse_decay_ms": 150,
+  "pulse_depth": 0.95,
+  "pulse_fade_ms": 100,
+  "pulse_hold_ms": 40,
+  "pulse_mode": "beat",
+  "pulse_sensitivity": 1.8,
+  "pulse_threshold": 0.67
+ }
+}

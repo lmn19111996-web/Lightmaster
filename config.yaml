@@ -1,0 +1,59 @@
+# Music Light Sync config. All levels are linear 0..1 (the script applies gamma itself).
+# These are startup defaults; the web UI changes the live values.
+
+wled:
+  host: 192.168.68.50
+  # udp = WLED UDP realtime (DRGB, port 21324). ddp = DDP (port 4048).
+  # On this setup DDP queues inside WLED (~1 s lag), UDP realtime does not.
+  protocol: udp
+  # port: 21324        # optional, defaults to the protocol's standard port
+  udp_timeout_s: 2     # WLED returns to its normal look this long after the last frame
+
+strip:
+  pixels: 56           # 12 V WS281x, one pixel = one block, straight line (no wrap-around)
+
+fps: 60
+
+mode: performance      # cozy | performance
+color: gem_blue        # name from `colors` below, or [r, g, b] linear
+color_max: 0.20        # color level in performance mode
+cozy_color_max: 0.04   # color level in cozy mode
+
+pulse:                 # how the color brightness follows the bass (all adjustable live)
+  mode: beat           # beat = two states (off / hit), smooth = follows the bass level
+  threshold: 0.5       # beat: how strong a hit must be (0..1 of the auto-gained bass)
+  hold_ms: 80          # beat: how long a hit stays fully on
+  fade_ms: 25          # beat: how fast it drops back after the hold (short = two clear states)
+  depth: 0.9           # share of the brightness that pulses: 0 = steady, 1 = dark between hits
+  sensitivity: 1.3     # smooth: >1 reaches full brightness on softer hits
+  contrast: 2.0        # smooth: >1 keeps quiet parts down and makes hits pop
+  decay_ms: 150        # smooth: how fast the pulse falls after a hit
+
+spot:                  # white spot layer, sizes in pixels
+  width_px: 2
+  gap_px: 5
+  max: 1.0             # global cap ("spot_max")
+  decay_ms: 300
+  duck: 0.4
+  white_tint: [1.0, 0.82, 0.67]   # tune by eye until spots look neutral white
+  overflow: clip       # clip | normalize
+
+audio:
+  # Lights are delayed by this much to match the sound. Bluetooth speakers
+  # typically need 150-250 ms. Adjustable live in the web UI.
+  latency_ms: 0
+  device_latency_ms:   # per output device: part of the device name -> delay
+    "ULT FIELD": 200   # Bluetooth speaker; tune by ear
+
+web:
+  port: 8080
+  lan: false           # true = reachable from phones on the network (needs pin)
+  pin: ""
+  open_browser: true
+
+colors:
+  gem_blue: [0.05, 0.25, 1.0]
+  amber: [1.0, 0.45, 0.05]
+  magenta: [1.0, 0.05, 0.6]
+  red: [1.0, 0.02, 0.02]
+  green: [0.1, 1.0, 0.2]

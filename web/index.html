@@ -1,0 +1,375 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lightmaster</title>
+<style>
+  :root {
+    --bg: #0b0d12;
+    --panel: #141821;
+    --panel-2: #1b2030;
+    --line: #262c3d;
+    --text: #e7eaf2;
+    --muted: #8a93a8;
+    --accent: #4d7cff;          /* replaced live by the current light color */
+    --danger: #ff4d5e;
+    --warn: #ffb020;
+    --ok: #3ddc84;
+    --radius: 14px;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--text);
+    font: 15px/1.4 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  body { padding: 16px; max-width: 1100px; margin: 0 auto; }
+  header { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 14px; }
+  h1 { font-size: 20px; margin: 0; letter-spacing: .3px; }
+  .pill { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 999px;
+    background: var(--panel); border: 1px solid var(--line); color: var(--muted); font-size: 13px; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--danger); }
+  .dot.on, .dot.good { background: var(--ok); }
+  .dot.slow { background: var(--warn); }
+  .dot.unknown { background: var(--muted); }
+  .pill.alert { border-color: var(--danger); color: var(--text); }
+  .spacer { flex: 1; }
+
+  /* live strip */
+  .live { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px; margin-bottom: 14px; }
+  .strip { display: grid; gap: 2px; height: 42px; margin-bottom: 12px; }
+  .strip div { border-radius: 3px; background: #000; }
+  .meters { display: grid; grid-template-columns: auto 1fr auto; gap: 8px 12px; align-items: center; font-size: 13px; color: var(--muted); }
+  .meter { position: relative; height: 8px; background: var(--panel-2); border-radius: 4px; overflow: hidden; }
+  .meter > b { position: absolute; top: 0; bottom: 0; width: 2px; margin-left: -1px; background: var(--text); display: none; }
+  .meter > i { display: block; height: 100%; width: 0; background: var(--accent); transition: width 60ms linear; }
+  .num { font-variant-numeric: tabular-nums; min-width: 3.5em; text-align: right; color: var(--text); }
+
+  /* cards */
+  .grid { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px; }
+  .card h2 { font-size: 13px; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); margin: 0 0 14px; font-weight: 600; }
+  .card .sub { font-size: 13px; color: var(--muted); margin: -8px 0 14px; overflow-wrap: anywhere; }
+  .ctl { margin-bottom: 16px; }
+  .ctl:last-child { margin-bottom: 0; }
+  .ctl label { display: flex; justify-content: space-between; gap: 8px; font-size: 14px; margin-bottom: 8px; }
+  .ctl label .val { font-variant-numeric: tabular-nums; color: var(--muted); }
+
+  input[type=range] { width: 100%; accent-color: var(--accent); height: 28px; margin: 0; }
+  .row { display: flex; gap: 8px; align-items: center; }
+  .step { width: 36px; height: 32px; flex: none; border-radius: 8px; border: 1px solid var(--line);
+    background: var(--panel-2); color: var(--text); font-size: 16px; cursor: pointer; }
+  .step:hover { border-color: var(--muted); }
+
+  .seg { display: flex; background: var(--panel-2); border-radius: 10px; padding: 3px; gap: 3px; }
+  .seg button { flex: 1; padding: 9px 10px; border: 0; border-radius: 8px; background: transparent; color: var(--muted);
+    font: inherit; cursor: pointer; text-transform: capitalize; }
+  .seg button.on { background: var(--accent); color: #fff; }
+
+  .swatches { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  .sw { width: 38px; height: 38px; border-radius: 10px; border: 2px solid transparent; cursor: pointer; padding: 0;
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,.12); }
+  .sw.on { border-color: #fff; }
+  .custom { position: relative; width: 38px; height: 38px; border-radius: 10px; overflow: hidden;
+    background: conic-gradient(red, yellow, lime, cyan, blue, magenta, red); }
+  .custom input { position: absolute; inset: 0; opacity: 0; width: 100%; height: 100%; cursor: pointer; border: 0; }
+  .custom.on { outline: 2px solid #fff; outline-offset: -2px; }
+
+  .toggle { width: 100%; padding: 14px; border-radius: 12px; border: 1px solid var(--line); background: var(--panel-2);
+    color: var(--text); font: 600 15px system-ui, sans-serif; cursor: pointer; letter-spacing: .5px; }
+  .toggle.on { background: var(--danger); border-color: var(--danger); color: #fff; }
+  .toggle.big { padding: 18px; font-size: 17px; }
+
+  .keys { margin-top: 14px; color: var(--muted); font-size: 12px; }
+  kbd { background: var(--panel-2); border: 1px solid var(--line); border-radius: 4px; padding: 1px 5px; font: 12px ui-monospace, monospace; }
+
+  .banner { display: none; position: fixed; left: 50%; bottom: 16px; transform: translateX(-50%); max-width: calc(100% - 32px);
+    background: var(--panel-2); border: 1px solid var(--line); padding: 10px 14px; border-radius: 10px; font-size: 14px; z-index: 5; }
+  .banner.show { display: block; }
+  .banner.err { border-color: var(--danger); }
+
+  dialog { background: var(--panel); color: var(--text); border: 1px solid var(--line); border-radius: var(--radius); padding: 20px; }
+  dialog::backdrop { background: rgba(0,0,0,.6); }
+  dialog input { width: 100%; padding: 10px; margin: 10px 0; border-radius: 8px; border: 1px solid var(--line);
+    background: var(--panel-2); color: var(--text); font: inherit; }
+  dialog button { padding: 9px 16px; border-radius: 8px; border: 0; background: var(--accent); color: #fff; font: inherit; cursor: pointer; }
+
+  @media (max-width: 480px) { body { padding: 12px; } .strip { height: 30px; } }
+</style>
+</head>
+<body>
+<header>
+  <h1>Lightmaster</h1>
+  <span class="pill"><span class="dot" id="conn"></span><span id="connText">connecting…</span></span>
+  <span class="spacer"></span>
+  <span class="pill" id="link" title="Connection to WLED"><span class="dot" id="linkDot"></span><span id="linkText">WLED –</span></span>
+  <span class="pill" id="fps">– fps</span>
+</header>
+
+<section class="live">
+  <div class="strip" id="strip"></div>
+  <div class="meters">
+    <span>Pulse</span><div class="meter"><i id="pulse"></i></div><span class="num" id="pulseNum">–</span>
+    <span>Bass in</span><div class="meter" title="white mark = beat threshold"><i id="bass"></i><b id="thresholdMark"></b></div><span class="num" id="bassNum">–</span>
+  </div>
+</section>
+
+<main class="grid" id="cards"></main>
+
+<p class="keys">
+  <kbd>B</kbd> blackout · <kbd>←</kbd><kbd>→</kbd> color · <kbd>M</kbd> mode ·
+  <kbd>↑</kbd><kbd>↓</kbd> intensity · <kbd>[</kbd><kbd>]</kbd> light delay
+</p>
+
+<div class="banner" id="banner"></div>
+
+<dialog id="pinDialog">
+  <form method="dialog">
+    <div>This Lightmaster needs a PIN.</div>
+    <input id="pinInput" inputmode="numeric" autocomplete="off" autofocus>
+    <button>Connect</button>
+  </form>
+</dialog>
+
+<script>
+"use strict";
+const GROUPS = { main: "Main", pulse: "Pulse", levels: "Levels", sync: "Sync" };
+const GROUP_HINTS = {
+  pulse: "Beat: two states, off or hit. A hit fires when the bass crosses the Threshold (white mark on the " +
+         "Bass in meter) and jumps above its recent average. Smooth: brightness follows the bass level. " +
+         "Depth = how far it dips between hits. Hold/Fade (beat) and Decay (smooth) shape the fall after a hit.",
+};
+const PIN_KEY = "lightmaster.pin";
+
+let schema = null, state = {}, ws = null, seq = 0, backoff = 500;
+const controls = new Map();   // key -> {update(value)}
+const conditional = [];       // [{el, when: {key, value}}]: shown only when state[key] === value
+const dragging = new Set();   // keys being dragged: ignore server echoes for them
+let device = "";
+
+// ---------- helpers ----------
+const el = (tag, attrs = {}, ...kids) => {
+  const e = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs)) {
+    if (k === "class") e.className = v;
+    else if (k.startsWith("on")) e.addEventListener(k.slice(2), v);
+    else e.setAttribute(k, v);
+  }
+  for (const k of kids) e.append(k);
+  return e;
+};
+const storage = {
+  get(k) { try { return localStorage.getItem(k) || ""; } catch { return ""; } },
+  set(k, v) { try { localStorage.setItem(k, v); } catch {} },
+};
+const lin2srgb = c => c <= 0.0031308 ? 12.92 * c : 1.055 * Math.pow(c, 1 / 2.4) - 0.055;
+const srgb2lin = c => c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+const toHex = rgb => "#" + rgb.map(c => Math.round(Math.min(1, Math.max(0, lin2srgb(c))) * 255)
+  .toString(16).padStart(2, "0")).join("");
+const fromHex = h => [1, 3, 5].map(i => srgb2lin(parseInt(h.slice(i, i + 2), 16) / 255));
+const sameColor = (a, b) => a && b && a.every((v, i) => Math.abs(v - b[i]) < 1e-4);
+const decimals = step => step && step < 1 ? Math.max(0, -Math.floor(Math.log10(step))) : 0;
+const isPercent = p => p.kind === "float" && p.min === 0 && p.max <= 1;
+const fmt = (p, v) => isPercent(p) ? `${(v * 100).toFixed(Math.max(0, decimals(p.step) - 2))} %`
+  : `${Number(v).toFixed(decimals(p.step))}${p.unit ? " " + p.unit : ""}`;
+
+let bannerTimer = 0;
+function banner(text, isErr = false, ms = 3000) {
+  const b = document.getElementById("banner");
+  b.textContent = text; b.className = "banner show" + (isErr ? " err" : "");
+  clearTimeout(bannerTimer);
+  if (ms) bannerTimer = setTimeout(() => b.className = "banner", ms);
+}
+
+function send(cmd) {
+  if (ws && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ type: "cmd", id: ++seq, cmd }));
+}
+const set = (key, value) => send({ op: "set", key, value });
+
+// ---------- control builders (driven by the schema) ----------
+function buildRange(p) {
+  const input = el("input", { type: "range", min: p.min, max: p.max, step: p.step || "any" });
+  const val = el("span", { class: "val" });
+  let raf = 0;
+  input.addEventListener("pointerdown", () => dragging.add(p.key));
+  const release = () => { dragging.delete(p.key); set(p.key, Number(input.value)); };
+  input.addEventListener("pointerup", release);
+  input.addEventListener("change", release);
+  input.addEventListener("input", () => {
+    val.textContent = fmt(p, Number(input.value));
+    if (!raf) raf = requestAnimationFrame(() => { raf = 0; set(p.key, Number(input.value)); });
+  });
+  const nudge = d => send({ op: "nudge", key: p.key, delta: d * (p.step || 1) });
+  const row = el("div", { class: "row" },
+    el("button", { class: "step", title: "less", onclick: () => nudge(-1) }, "−"), input,
+    el("button", { class: "step", title: "more", onclick: () => nudge(1) }, "+"));
+  controls.set(p.key, { update(v) { if (!dragging.has(p.key)) input.value = v; val.textContent = fmt(p, v); } });
+  return el("div", { class: "ctl" }, el("label", {}, el("span", {}, p.label), val), row);
+}
+
+function buildChoice(p) {
+  const btns = p.choices.map(c => el("button", { onclick: () => set(p.key, c) }, c));
+  controls.set(p.key, { update(v) { btns.forEach((b, i) => b.classList.toggle("on", p.choices[i] === v)); } });
+  return el("div", { class: "ctl" }, el("label", {}, el("span", {}, p.label)), el("div", { class: "seg" }, ...btns));
+}
+
+function buildBool(p) {
+  const big = p.key === "blackout";
+  const b = el("button", { class: "toggle" + (big ? " big" : ""), onclick: () => send({ op: "toggle", key: p.key }) });
+  controls.set(p.key, { update(v) { b.classList.toggle("on", v); b.textContent = `${p.label}: ${v ? "ON" : "off"}`; } });
+  return el("div", { class: "ctl" }, b);
+}
+
+function buildColor(p) {
+  const names = Object.keys(schema.palette);
+  const sws = names.map(n => el("button", { class: "sw", title: n, style: `background:${toHex(schema.palette[n])}`,
+    onclick: () => set(p.key, schema.palette[n]) }));
+  const picker = el("input", { type: "color", title: "custom color" });
+  picker.addEventListener("input", () => set(p.key, fromHex(picker.value)));
+  const custom = el("label", { class: "custom", title: "custom color" }, picker);
+  const name = el("span", { class: "val" });
+  controls.set(p.key, { update(v) {
+    let match = -1;
+    sws.forEach((s, i) => { const on = sameColor(schema.palette[names[i]], v); s.classList.toggle("on", on); if (on) match = i; });
+    custom.classList.toggle("on", match < 0);
+    name.textContent = match >= 0 ? names[match].replace(/_/g, " ") : "custom";
+    if (document.activeElement !== picker) picker.value = toHex(v);
+    document.documentElement.style.setProperty("--accent", toHex(v.map(c => c / Math.max(...v, 1e-6))));
+  } });
+  return el("div", { class: "ctl" }, el("label", {}, el("span", {}, p.label), name), el("div", { class: "swatches" }, ...sws, custom));
+}
+
+const BUILDERS = { float: buildRange, int: buildRange, choice: buildChoice, bool: buildBool, color: buildColor };
+
+function buildUI() {
+  const cards = document.getElementById("cards");
+  cards.replaceChildren();
+  controls.clear();
+  conditional.length = 0;
+  const groups = {};
+  for (const p of schema.params) (groups[p.group] ||= []).push(p);
+  const order = [...Object.keys(GROUPS).filter(g => groups[g]), ...Object.keys(groups).filter(g => !GROUPS[g])];
+  for (const g of order) {
+    const card = el("section", { class: "card" }, el("h2", {}, GROUPS[g] || g));
+    if (g === "sync") card.append(el("div", { class: "sub", id: "device" }, "Audio device: –"));
+    if (GROUP_HINTS[g]) card.append(el("div", { class: "sub" }, GROUP_HINTS[g]));
+    // blackout first and big in the main card
+    const ps = groups[g].slice().sort((a, b) => (b.key === "blackout") - (a.key === "blackout"));
+    for (const p of ps) {
+      const node = (BUILDERS[p.kind] || (() => el("div")))(p);
+      if (p.when) conditional.push({ el: node, when: p.when });
+      card.append(node);
+    }
+    cards.append(card);
+  }
+  applyState();
+}
+
+function applyState() {
+  for (const [k, c] of controls) if (k in state) c.update(state[k]);
+  for (const { el: node, when } of conditional) node.style.display = state[when.key] === when.value ? "" : "none";
+  const mark = document.getElementById("thresholdMark");
+  const beat = state.pulse_mode === "beat" && typeof state.pulse_threshold === "number";
+  mark.style.display = beat ? "block" : "none";
+  if (beat) mark.style.left = `${state.pulse_threshold * 100}%`;
+}
+
+// ---------- live telemetry ----------
+let stripCells = [];
+function updateTelemetry(t) {
+  if (t.rgb) {
+    const n = t.rgb.length / 6;
+    const strip = document.getElementById("strip");
+    if (stripCells.length !== n) {
+      strip.style.gridTemplateColumns = `repeat(${n}, 1fr)`;
+      stripCells = Array.from({ length: n }, () => el("div"));
+      strip.replaceChildren(...stripCells);
+    }
+    for (let i = 0; i < n; i++) stripCells[i].style.background = "#" + t.rgb.substr(i * 6, 6);
+  }
+  if (t.pulse !== undefined) {
+    document.getElementById("pulse").style.width = `${t.pulse * 100}%`;
+    document.getElementById("pulseNum").textContent = t.pulse.toFixed(2);
+    document.getElementById("bass").style.width = `${t.bass * 100}%`;
+    document.getElementById("bassNum").textContent = t.silent ? "silent" : t.bass.toFixed(2);
+  }
+  if ("link" in t) updateLink(t.link);
+  if (t.fps !== undefined) document.getElementById("fps").textContent = `${t.fps.toFixed(0)} fps`;
+  if (t.device !== undefined && t.device !== device) {
+    device = t.device;
+    const d = document.getElementById("device");
+    if (d) d.textContent = `Audio device: ${device || "–"}`;
+  }
+}
+
+function updateLink(l) {
+  const pill = document.getElementById("link"), dot = document.getElementById("linkDot"), txt = document.getElementById("linkText");
+  if (!l) { dot.className = "dot unknown"; txt.textContent = "WLED off"; pill.title = "Not sending to WLED (--no-wled)"; return; }
+  const st = l.state || "unknown";
+  dot.className = "dot " + (st === "bad" || st === "down" ? "" : st);
+  const problem = l.foreign_source ? "other source!" : l.live === false ? "not live!" : "";
+  txt.textContent = st === "down" ? "WLED unreachable"
+    : `WLED ${l.rtt_ms ?? "–"} ms${problem ? " · " + problem : ""}`;
+  pill.classList.toggle("alert", st === "bad" || st === "down" || !!problem);
+  pill.title = [
+    `Link: ${st}` + (l.loss ? `, ${Math.round(l.loss * 100)} % pings lost` : ""),
+    l.rssi != null ? `Wi-Fi signal: ${l.rssi} dBm` : "",
+    l.mode ? `WLED mode: ${l.live ? "live " + l.mode : "not live"}` : "",
+    l.source ? `Realtime source: ${l.source}` : "",
+    l.wled_fps != null ? `WLED refresh: ${l.wled_fps} fps` : "",
+  ].filter(Boolean).join("\n");
+}
+
+// ---------- connection ----------
+function setConn(on, text) {
+  document.getElementById("conn").classList.toggle("on", on);
+  document.getElementById("connText").textContent = text || (on ? "live" : "disconnected");
+}
+
+const handlers = {
+  hello(m) { schema = m.schema; state = m.state; buildUI(); updateTelemetry(m.telemetry || {}); },
+  state(m) { state = m.state; applyState(); },
+  telemetry(m) { updateTelemetry(m); },
+  ack(m) { if (!m.ok) banner(m.error, true); },
+};
+
+function connect() {
+  const pin = storage.get(PIN_KEY);
+  const q = pin ? `?pin=${encodeURIComponent(pin)}` : "";
+  ws = new WebSocket(`${location.protocol === "https:" ? "wss" : "ws"}://${location.host}/ws${q}`);
+  ws.onopen = () => { setConn(true); backoff = 500; };
+  ws.onmessage = e => { try { const m = JSON.parse(e.data); handlers[m.type]?.(m); } catch (err) { console.error(err); } };
+  ws.onclose = async () => {
+    setConn(false, "reconnecting…");
+    try {   // was it the PIN?
+      const r = await fetch(`/api/state${q}`);
+      if (r.status === 401) return askPin();
+    } catch {}
+    setTimeout(connect, backoff);
+    backoff = Math.min(backoff * 2, 5000);
+  };
+}
+
+function askPin() {
+  setConn(false, "PIN needed");
+  const d = document.getElementById("pinDialog");
+  d.addEventListener("close", () => { storage.set(PIN_KEY, document.getElementById("pinInput").value.trim()); connect(); }, { once: true });
+  d.showModal();
+}
+
+// ---------- keyboard ----------
+document.addEventListener("keydown", e => {
+  if (e.target.matches("input, textarea") || e.ctrlKey || e.metaKey || e.altKey || !schema) return;
+  const k = e.key;
+  const map = {
+    b: { op: "toggle", key: "blackout" }, B: { op: "toggle", key: "blackout" },
+    m: { op: "cycle", key: "mode", dir: 1 }, M: { op: "cycle", key: "mode", dir: 1 },
+    ArrowRight: { op: "cycle", key: "color", dir: 1 }, ArrowLeft: { op: "cycle", key: "color", dir: -1 },
+    ArrowUp: { op: "nudge", key: "intensity", delta: 0.05 }, ArrowDown: { op: "nudge", key: "intensity", delta: -0.05 },
+    "]": { op: "nudge", key: "latency_ms", delta: 10 }, "[": { op: "nudge", key: "latency_ms", delta: -10 },
+  };
+  if (map[k]) { e.preventDefault(); send(map[k]); }
+});
+
+connect();
+</script>
+</body>
+</html>

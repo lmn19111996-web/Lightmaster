@@ -1,0 +1,6 @@
+numpy>=1.26
+PyAudioWPatch>=0.2.12
+PyYAML>=6.0
+pynput>=1.7
+aiohttp>=3.9
+pytest>=8.0
